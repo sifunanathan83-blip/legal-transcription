@@ -1,0 +1,163 @@
+import { ValidationError } from './error-handler.js';
+import { LIMITS } from '../utils/constants.js';
+
+export function validateRequest(req, res, next) {
+  if (['POST', 'PUT'].includes(req.method)) {
+    const contentType = req.headers['content-type'];
+    if (!contentType || !contentType.includes('application/json')) {
+      return next(
+        new ValidationError('Content-Type must be application/json')
+      );
+    }
+  }
+  next();
+}
+
+export function validateCaseData(caseData) {
+  if (!caseData) {
+    throw new ValidationError('Case data is required');
+  }
+
+  if (!caseData.case_number) {
+    throw new ValidationError('Case number is required');
+  }
+
+  if (typeof caseData.case_number !== 'string') {
+    throw new ValidationError('Case number must be a string');
+  }
+
+  if (
+    caseData.case_name &&
+    caseData.case_name.length > LIMITS.MAX_CASE_NAME_LENGTH
+  ) {
+    throw new ValidationError(
+      `Case name exceeds maximum length of ${LIMITS.MAX_CASE_NAME_LENGTH} characters`
+    );
+  }
+
+  return true;
+}
+
+export function validateSpeakerData(speakerData) {
+  if (!speakerData) {
+    throw new ValidationError('Speaker data is required');
+  }
+
+  if (!speakerData.id) {
+    throw new ValidationError('Speaker ID is required');
+  }
+
+  if (!speakerData.label) {
+    throw new ValidationError('Speaker label is required');
+  }
+
+  if (speakerData.name && speakerData.name.length > LIMITS.MAX_SPEAKER_NAME_LENGTH) {
+    throw new ValidationError(
+      `Speaker name exceeds maximum length of ${LIMITS.MAX_SPEAKER_NAME_LENGTH} characters`
+    );
+  }
+
+  return true;
+}
+
+export function validateTranscriptSegment(segment) {
+  if (!segment) {
+    throw new ValidationError('Segment data is required');
+  }
+
+  if (!segment.speaker_id) {
+    throw new ValidationError('Speaker ID is required');
+  }
+
+  if (!segment.text) {
+    throw new ValidationError('Transcript text is required');
+  }
+
+  if (segment.text.length > LIMITS.MAX_TRANSCRIPT_SEGMENT_LENGTH) {
+    throw new ValidationError(
+      `Transcript segment exceeds maximum length of ${LIMITS.MAX_TRANSCRIPT_SEGMENT_LENGTH} characters`
+    );
+  }
+
+  if (typeof segment.start_time_ms !== 'number' || segment.start_time_ms < 0) {
+    throw new ValidationError('Start time must be a non-negative number');
+  }
+
+  if (
+    typeof segment.end_time_ms !== 'number' ||
+    segment.end_time_ms < segment.start_time_ms
+  ) {
+    throw new ValidationError('End time must be greater than start time');
+  }
+
+  if (segment.confidence !== undefined) {
+    if (typeof segment.confidence !== 'number' || segment.confidence < 0 || segment.confidence > 1) {
+      throw new ValidationError('Confidence score must be between 0 and 1');
+    }
+  }
+
+  return true;
+}
+
+export function validateAudioChunk(chunk) {
+  if (!chunk) {
+    throw new ValidationError('Audio chunk is required');
+  }
+
+  if (!(chunk instanceof Buffer) && !Array.isArray(chunk)) {
+    throw new ValidationError('Audio chunk must be a Buffer or array');
+  }
+
+  if (chunk.length > LIMITS.MAX_AUDIO_CHUNK_SIZE) {
+    throw new ValidationError(
+      `Audio chunk exceeds maximum size of ${LIMITS.MAX_AUDIO_CHUNK_SIZE} bytes`
+    );
+  }
+
+  return true;
+}
+
+export function validateExportRequest(exportData) {
+  if (!exportData) {
+    throw new ValidationError('Export request data is required');
+  }
+
+  const validFormats = ['pdf', 'docx', 'txt', 'json'];
+  if (!validFormats.includes(exportData.format)) {
+    throw new ValidationError(
+      `Invalid export format. Must be one of: ${validFormats.join(', ')}`
+    );
+  }
+
+  return true;
+}
+
+export function validateSessionInit(initData) {
+  if (!initData) {
+    throw new ValidationError('Session initialization data is required');
+  }
+
+  if (!initData.case_id) {
+    throw new ValidationError('Case ID is required');
+  }
+
+  if (!Array.isArray(initData.speakers) || initData.speakers.length === 0) {
+    throw new ValidationError('At least one speaker is required');
+  }
+
+  initData.speakers.forEach((speaker) => {
+    validateSpeakerData(speaker);
+  });
+
+  return true;
+}
+
+export default {
+  validateRequest,
+  validateCaseData,
+  validateSpeakerData,
+  validateTranscriptSegment,
+  validateAudioChunk,
+  validateExportRequest,
+  validateSessionInit,
+};
