@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  legal-transcription:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      TRANSCRIPTION_SERVICE: mock
+      LOG_LEVEL: info
+    volumes:
+      - ./src:/app/src
+      - ./legal_transcription.db:/app/legal_transcription.db
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
